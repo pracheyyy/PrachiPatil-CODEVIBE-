@@ -11,6 +11,7 @@ const backend = express();
 const server = http.Server(backend);
 
 backend.use(express.json());
+backend.use(express.urlencoded({ extended: true }));
 
 backend.use(
   cors({
@@ -23,19 +24,12 @@ backend.use(
   })
 );
 
-// 👇 important line for preflight
-backend.use(cors({
-  origin: [
-    "http://localhost:5173",
-    "https://codevibeforyou.netlify.app"
-  ],
-  methods: ["GET","POST","PUT","DELETE","PATCH","OPTIONS"],
-  credentials: true
-}));
 backend.use(routes);
 
+const MONGODB_URL = process.env.DB_URL || "mongodb://127.0.0.1:27017/codevibe";
+
 mongoose
-  .connect(process.env.DB_URL)
+  .connect(MONGODB_URL)
   .then(() => {
     const PORT = process.env.PORT || 5002;
 
