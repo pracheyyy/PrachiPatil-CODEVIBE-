@@ -4,6 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../AuthProvider.jsx";
 import API_BASE_URL from "../config/api";
 import loginImage from "../assets/loginImage.png";
+import PasswordField from "./PasswordField";
 
 
 const Login = () => {
@@ -55,12 +56,12 @@ const Login = () => {
               required
             />
 
-            <label>PASSWORD:</label>
-            <input
-              type="password"
+            <PasswordField
+              id="login-password"
+              label="PASSWORD:"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              required
+        
             />
 
             <button type="submit" disabled={loading}>

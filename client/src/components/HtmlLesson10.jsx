@@ -42,11 +42,10 @@ const HtmlLesson10 = () => {
   <p>© 2025 My Simple Site. All rights reserved.</p>
 </footer>`}</pre>
 
-<Compiler 
+<Compiler
+        hint="💡 Review the lesson instructions carefully. Make sure your output matches exactly." 
   LessonId="html-lesson10"
-  expectedOutput={(output) => {
-    const normalize = (s) => s.replace(/\s+/g, " ").trim();
-    const expected = `<header> 
+  expectedOutput={`<header> 
 <h1>My Simple Site</h1> 
 <nav> 
 <a href="home.html">Home</a> 
@@ -60,9 +59,7 @@ const HtmlLesson10 = () => {
 </main> 
 <footer> 
 <p>© 2025 My Simple Site. All rights reserved.</p> 
-</footer>`;
-    return normalize(output) === normalize(expected);
-  }}
+</footer>`}
   initialCode={`<header>
   <h1>My Simple Site</h1>
   <nav>

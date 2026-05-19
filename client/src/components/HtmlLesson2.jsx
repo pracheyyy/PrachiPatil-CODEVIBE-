@@ -105,12 +105,10 @@ const HtmlLesson2 = () => {
 
       <h2> 💻 Try Yourself, Follow Instructions!</h2>
 
-      <Compiler 
+      <Compiler
+        hint="💡 Review the lesson instructions carefully. Make sure your output matches exactly." 
         LessonId="html-lesson2"
-        expectedOutput={(output) => {
-          const norm = (s) => String(s || "").replace(/\s+/g, " ").trim();
-          return norm(output) === norm(expectedNormalized);
-        }}
+        expectedOutput={`<b> bold </b> <i> italic </i> <u> under line </u> <strong> bold important message </strong> <em> italic important message </em> <mark> highlight </mark> <marquee> headline </marquee> <br> <hr> <abbr>HTML</abbr>`}
         initialCode={`<h1> HELLO, From Code Vibe </h1>`}
         onSuccess={handleSuccess}
       />

@@ -75,15 +75,12 @@ For example:
       </div>
 
       <Compiler
+        hint="💡 Review the lesson instructions carefully. Make sure your output matches exactly."
   LessonId="html-lesson4"
-  expectedOutput={(output) => {
-    const normalize = (s) => s.replace(/\s+/g, " ").trim();
-    const expected = `<a href="https://www.google.com">Go to Google</a>
+  expectedOutput={`<a href="https://www.google.com">Go to Google</a>
 <input type="text" placeholder="Enter your name">
 <button type="button">Submit</button>
-<p title="Hover Text">This is a paragraph.</p>`;
-    return normalize(output) === normalize(expected);
-  }}
+<p title="Hover Text">This is a paragraph.</p>`}
   initialCode={`<h1> HELLO, From Code Vibe </h1>`}
   onSuccess={handleSuccess}
 />
