@@ -2,7 +2,8 @@
 const { exec } = require("child_process");
 const path = require("path");
 const fs = require("fs");
-const ExecuteLog = require("../../models/execute.model"); 
+const ExecuteLog = require("../../models/execute.model");
+const { runMongoSimulation, isMongoCode } = require("../../utils/mongoSimulator");
 
 const runCommandWithTempFile = (commandBuilder, code, ext) =>
   new Promise((resolve, reject) => {
@@ -16,9 +17,9 @@ const runCommandWithTempFile = (commandBuilder, code, ext) =>
     }
 
     exec(commandBuilder(filepath), { timeout: 8000 }, (error, stdout, stderr) => {
-      try { if (fs.existsSync(filepath)) fs.unlinkSync(filepath); } catch {}
-      try { if (fs.existsSync(`${filepath}.out`)) fs.unlinkSync(`${filepath}.out`); } catch {}
-      try { if (fs.existsSync(`${filepath.replace(/\.\w+$/, ".class")}`)) fs.unlinkSync(`${filepath.replace(/\.\w+$/, ".class")}`); } catch {}
+      try { if (fs.existsSync(filepath)) fs.unlinkSync(filepath); } catch { }
+      try { if (fs.existsSync(`${filepath}.out`)) fs.unlinkSync(`${filepath}.out`); } catch { }
+      try { if (fs.existsSync(`${filepath.replace(/\.\w+$/, ".class")}`)) fs.unlinkSync(`${filepath.replace(/\.\w+$/, ".class")}`); } catch { }
 
       if (error) return reject(stderr || error.message);
       resolve(stdout);
@@ -50,12 +51,25 @@ const executeCode = async (req, res) => {
         break;
       case "node":
       case "javascript":
-        output = await runCommandWithTempFile((file) => `node "${file}"`, code, "js");
+        // ✅ KEY LOGIC:
+        // If the code contains MongoDB patterns → run through simulator
+        // Otherwise → run normally with Node.js
+        if (isMongoCode(code)) {
+          output = await runMongoSimulation(code);
+        } else {
+          output = await runCommandWithTempFile(
+            (f) => `node "${f}"`,
+            code, "js"
+          );
+        }
         break;
-      case "dbms":
+
+      // ── Mongo / DBMS (explicit) ───────────────────────────
       case "mongo":
-        output = "✅ Simulated DB/MS execution: Query parsed successfully.";
+      case "dbms":
+        output = await runMongoSimulation(code);
         break;
+
       default:
         return res.status(400).json({ message: `Language '${language}' not supported` });
     }

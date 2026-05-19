@@ -11,9 +11,18 @@ const SCORING = (attempt) =>
   attempt === 5 ? 20  : 0;
 
 const isJSFamily = (lang) => ["js", "dsa-js", "oop-js"].includes(lang);
-const serverLanguages = ["c","cpp","python","java","node","dbms","mongo"];
+const serverLanguages = ["c","cpp","python","java","node","javascript","dbms","mongo"];
 
 const normalizeHTML = (s = "") => String(s).trim().replace(/\s+/g, " ");
+
+// ✅ NEW: Escape HTML for safe display
+const escapeHtml = (s = "") =>
+  String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 
 const Compiler = ({ LessonId, language: fixedLanguage, initialCode = "", expectedOutput, onSuccess }) => {
   const [language, setLanguage] = useState(fixedLanguage || "html");
@@ -23,40 +32,81 @@ const Compiler = ({ LessonId, language: fixedLanguage, initialCode = "", expecte
   const [error, setError] = useState("");
   const [status, setStatus] = useState("");
   const iframeRef = useRef(null);
-  const copyCode = async () => {
-  try {
-    await navigator.clipboard.writeText(code);
-    setStatus("📋 Code copied!");
-  } catch {
-    setError("Failed to copy code");
-  }
-};
 
-const downloadCode = () => {
-  const extensions = {
-    html: "html",
-    css: "css",
-    js: "js",
-    react: "jsx",
-    python: "py",
-    java: "java",
-    c: "c",
-    cpp: "cpp"
+  // ✅ NEW: Render plain text output inside the iframe (terminal-style)
+  const showOutputInIframe = (text, type = "success") => {
+    const iframe = iframeRef.current;
+    const doc = iframe?.contentDocument || iframe?.contentWindow?.document;
+    if (!doc) return;
+
+    const bgColor    = type === "error" ? "#1a0000" : "#0d1117";
+    const textColor  = type === "error" ? "#ff6b6b" : "#9efc9e";
+    const borderCol  = type === "error" ? "#ff4d4d" : "#22c55e";
+
+    doc.open();
+    doc.write(`
+      <html>
+        <head>
+          <style>
+            html, body {
+              margin: 0;
+              padding: 0;
+              background: ${bgColor};
+              color: ${textColor};
+              font-family: 'Courier New', Consolas, monospace;
+              font-size: 14px;
+              height: 100%;
+              overflow: auto;
+            }
+            .terminal {
+              padding: 16px;
+              white-space: pre-wrap;
+              word-break: break-word;
+              line-height: 1.5;
+              border-left: 3px solid ${borderCol};
+            }
+            .prompt {
+              color: ${borderCol};
+              font-weight: bold;
+              margin-bottom: 8px;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="terminal">
+            <div class="prompt">${type === "error" ? "✖ Error Output" : "▶ Program Output"}</div>
+            ${escapeHtml(text) || "<i style='color:#666'>(no output)</i>"}
+          </div>
+        </body>
+      </html>
+    `);
+    doc.close();
   };
 
-  const ext = extensions[language] || "txt";
+  const copyCode = async () => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setStatus("📋 Code copied!");
+    } catch {
+      setError("Failed to copy code");
+    }
+  };
 
-  const blob = new Blob([code], { type: "text/plain" });
-  const link = document.createElement("a");
-
-  link.href = URL.createObjectURL(blob);
-  link.download = `codevibe-code.${ext}`;
-  link.click();
-
-  URL.revokeObjectURL(link.href);
-
-  setStatus("⬇️ Code downloaded!");
-};
+  const downloadCode = () => {
+    const extensions = {
+      html: "html", css: "css", js: "js", react: "jsx",
+      python: "py", java: "java", c: "c", cpp: "cpp",
+      javascript: "js", node: "js", mongo: "js", dbms: "js"
+    };
+    const ext = extensions[language] || "txt";
+    const blob = new Blob([code], { type: "text/plain" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `codevibe-code.${ext}`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+    setStatus("⬇️ Code downloaded!");
+  };
 
   const saveProgress = (lessonId, sc, attempt) => {
     const email = localStorage.getItem("userEmail");
@@ -99,8 +149,10 @@ const downloadCode = () => {
     iframeDoc.close();
     setTimeout(() => {
       const got = normalizeHTML(iframeDoc.body?.innerHTML);
+      let exp = expectedOutput;
+      if (typeof exp === "string") exp = normalizeHTML(exp);
       if (decide(got)) pass(attempt);
-      else fail(`Output mismatch\nExpected:\n${normalizeHTML(expectedOutput || "")}\nGot:\n${got}`);
+      else fail(`Output mismatch\nExpected:\n${typeof exp === "string" ? exp : "[use function/regex]"}\nGot:\n${got}`);
     }, 250);
   };
 
@@ -134,7 +186,10 @@ const downloadCode = () => {
         const comp = iframeWin.getComputedStyle(el);
         const exp = expectedOutput[selector];
         for (const prop of Object.keys(exp)) {
-          if (comp[prop] !== exp[prop]) { mismatches.push(`${selector} → ${prop}: expected "${exp[prop]}", got "${comp[prop]}"`); allOk = false; }
+          if (comp[prop] !== exp[prop]) {
+            mismatches.push(`${selector} → ${prop}: expected "${exp[prop]}", got "${comp[prop]}"`);
+            allOk = false;
+          }
         }
       }
       if (allOk || decide(true, { language: "css", code, document: iframeDoc, window: iframeWin })) pass(attempt);
@@ -211,49 +266,68 @@ const downloadCode = () => {
     }, 700);
   };
 
-  // ------------------- server-side runner -------------------
+  // ------------------- ✅ UPDATED server-side runner -------------------
 
   const runServer = async (attempt) => {
     try {
       setStatus("⏳ Running on server...");
       setError("");
-      const res = await axios.post(`${API_BASE_URL}/api/execute/${language}`, {
-        email: localStorage.getItem("userEmail") || "guest@example.com",
-        code
-      }, { timeout: 12000 });
+
+      // Show loading state in iframe
+      showOutputInIframe("⏳ Executing on server...", "success");
+
+      const res = await axios.post(
+        `${API_BASE_URL}/api/execute/${language}`,
+        {
+          email: localStorage.getItem("userEmail") || "guest@example.com",
+          code,
+        },
+        { timeout: 12000 }
+      );
+
       const out = String(res.data.output ?? "").trim();
-      if (decide(out)) pass(attempt);
-      else fail(`Server output mismatch\nGot:\n${out}`);
+
+      // ✅ ALWAYS show the output in iframe
+      showOutputInIframe(out || "(no output)", "success");
+
+      if (decide(out)) {
+        pass(attempt);
+      } else {
+        fail(`Server output mismatch\nGot:\n${out}`);
+      }
     } catch (e) {
-      const errMsg = e?.response?.data?.error || e?.response?.data?.message || e?.message || String(e);
+      const errMsg =
+        e?.response?.data?.error ||
+        e?.response?.data?.message ||
+        e?.message ||
+        String(e);
+
+      // ✅ Show error in iframe too
+      showOutputInIframe(errMsg, "error");
+
       fail("Server execution error: " + errMsg);
     }
   };
 
   // ------------------- orchestrator -------------------
   useEffect(() => {
-  const handleKeyDown = (e) => {
-    if (e.ctrlKey && e.key === "Enter") {
-      e.preventDefault();
-      runCode();
-    }
+    const handleKeyDown = (e) => {
+      if (e.ctrlKey && e.key === "Enter") {
+        e.preventDefault();
+        runCode();
+      }
+      if (e.ctrlKey && e.key.toLowerCase() === "r") {
+        e.preventDefault();
+        setCode(initialCode);
+        setStatus("");
+        setError("");
+        setScore(null);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [code, initialCode, language, tries]);
 
-    if (e.ctrlKey && e.key.toLowerCase() === "r") {
-      e.preventDefault();
-
-      setCode(initialCode);
-      setStatus("");
-      setError("");
-      setScore(null);
-    }
-  };
-
-  window.addEventListener("keydown", handleKeyDown);
-
-  return () => {
-    window.removeEventListener("keydown", handleKeyDown);
-  };
-}, [code, initialCode, language, tries]);
   const runCode = async () => {
     const isFirstPass = score === null;
     const attempt = isFirstPass ? tries + 1 : tries;
@@ -269,11 +343,14 @@ const downloadCode = () => {
     const iframeDoc = iframe?.contentDocument || iframe?.contentWindow?.document;
     const iframeWin = iframe?.contentWindow;
 
-    if (!iframeDoc && !serverLanguages.includes(language)) { fail("Iframe not ready"); return; }
+    if (!iframeDoc && !serverLanguages.includes(language)) {
+      fail("Iframe not ready");
+      return;
+    }
 
     if (serverLanguages.includes(language)) return runServer(attempt);
     if (language === "html") return runHTML(attempt, iframeDoc);
-    if (language === "css") return runCSS(attempt, iframeDoc, iframeWin);
+    if (language === "css")  return runCSS(attempt, iframeDoc, iframeWin);
     if (isJSFamily(language)) return runJSFamily(attempt, iframeDoc);
     if (language === "react") return runReact(attempt, iframeDoc);
     fail("Unsupported language in this setup.");
@@ -282,24 +359,24 @@ const downloadCode = () => {
   return (
     <div className="compiler" style={{ color: "#fff", background: "#111", padding: 16, borderRadius: 12 }}>
       {!fixedLanguage && (
-       <select
-        value={language}
-        onChange={(e) => setLanguage(e.target.value)}
-        style={{
-          backgroundColor: "#1f1f1f",
-    color: "#ffffff",
-    padding: "10px 14px",
-    borderRadius: "10px",
-    border: "1px solid #4f46e5",
-    outline: "none",
-    marginBottom: "10px",
-    fontSize: "14px",
-    fontWeight: "500",
-    boxShadow: "0 4px 12px rgba(79, 70, 229, 0.25)",
-    cursor: "pointer",
-    minWidth: "140px",
-        }}
-      >
+        <select
+          value={language}
+          onChange={(e) => setLanguage(e.target.value)}
+          style={{
+            backgroundColor: "#1f1f1f",
+            color: "#ffffff",
+            padding: "10px 14px",
+            borderRadius: "10px",
+            border: "1px solid #4f46e5",
+            outline: "none",
+            marginBottom: "10px",
+            fontSize: "14px",
+            fontWeight: "500",
+            boxShadow: "0 4px 12px rgba(79, 70, 229, 0.25)",
+            cursor: "pointer",
+            minWidth: "140px",
+          }}
+        >
           <option value="html">HTML</option>
           <option value="css">CSS</option>
           <option value="js">JavaScript</option>
@@ -308,102 +385,116 @@ const downloadCode = () => {
       )}
 
       <div style={{ position: "relative", marginTop: 12 }}>
+        <div
+          style={{
+            position: "absolute",
+            top: 10,
+            right: 10,
+            display: "flex",
+            gap: 8,
+            zIndex: 10,
+          }}
+        >
+          <button
+            title="Copy Code"
+            onClick={copyCode}
+            style={{
+              background: "#059669",
+              color: "white",
+              border: "none",
+              borderRadius: 15,
+              padding: "6px 10px",
+              cursor: "pointer",
+              fontSize: 12,
+            }}
+          >
+            📋 Copy
+          </button>
 
-  <div
-    style={{
-      position: "absolute",
-      top: 10,
-      right: 10,
-      display: "flex",
-      gap: 8,
-      zIndex: 10
-    }}
-  >
-    <button
-      title="Copy Code"
-      onClick={copyCode}
-      style={{
-        background: "#059669",
-        color: "white",
-        border: "none",
-        borderRadius: 15,
-        padding: "6px 10px",
-        cursor: "pointer",
-        fontSize: 12
-      }}
-    >
-      📋 Copy
-    </button>
+          <button
+            title="Download Code"
+            onClick={downloadCode}
+            style={{
+              background: "#7c3aed",
+              color: "white",
+              border: "none",
+              borderRadius: 15,
+              padding: "6px 10px",
+              cursor: "pointer",
+              fontSize: 12,
+            }}
+          >
+            Download
+          </button>
+        </div>
 
-    <button
-      title="Download Code"
-      onClick={downloadCode}
-      style={{
-        background: "#7c3aed",
-        color: "white",
-        border: "none",
-        borderRadius: 15,
-        padding: "6px 10px",
-        cursor: "pointer",
-        fontSize: 12
-      }}
-    >
-      Download
-    </button>
-  </div>
+        <textarea
+          value={code}
+          onChange={(e) => setCode(e.target.value)}
+          style={{
+            width: "100%",
+            height: 180,
+            background: "#1b1b1b",
+            color: "#9efc9e",
+            padding: 12,
+            borderRadius: 8,
+          }}
+          placeholder={`// Type your code here.`}
+        />
+      </div>
 
-  <textarea
-    value={code}
-    onChange={e => setCode(e.target.value)}
-    style={{
-      width: "100%",
-      height: 180,
-      background: "#1b1b1b",
-      color: "#9efc9e",
-      padding: 12,
-      borderRadius: 8
-    }}
-    placeholder={`// Type your code here. Use console.log for JS outputs.\n// For React define function App(){ return <h1>Hello</h1> }\n// Server languages will be executed by backend: POST /api/execute/:language`}
-  />
-</div>
+      <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+        <button
+          title="Run (Ctrl + Enter)"
+          onClick={runCode}
+          style={{
+            padding: "8px 14px",
+            background: "#2563eb",
+            color: "#fff",
+            borderRadius: 10,
+          }}
+        >
+          Run
+        </button>
 
-<div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+        <button
+          title="Reset (Ctrl + R)"
+          onClick={() => {
+            setCode(initialCode);
+            setStatus("");
+            setError("");
+            setScore(null);
+            // ✅ Clear iframe too
+            const iframe = iframeRef.current;
+            const doc = iframe?.contentDocument;
+            if (doc) {
+              doc.open();
+              doc.write("");
+              doc.close();
+            }
+          }}
+          style={{
+            padding: "8px 14px",
+            background: "#374151",
+            color: "#fff",
+            borderRadius: 10,
+          }}
+        >
+          Reset
+        </button>
+      </div>
 
-  <button
-    title="Run (Ctrl + Enter)"
-    onClick={runCode}
-    style={{
-      padding: "8px 14px",
-      background: "#2563eb",
-      color: "#fff",
-      borderRadius: 10
-    }}
-  >
-    Run
-  </button>
-
-  <button
-    title="Reset (Ctrl + R)"
-    onClick={() => {
-      setCode(initialCode);
-      setStatus("");
-      setError("");
-      setScore(null);
-    }}
-    style={{
-      padding: "8px 14px",
-      background: "#374151",
-      color: "#fff",
-      borderRadius: 10
-    }}
-  >
-    Reset
-  </button>
-
-</div>
-
-      <iframe ref={iframeRef} style={{ width: "100%", height: 220, background: "#fff", marginTop: 12, borderRadius: 8 }}
-        title="code-output" sandbox="allow-scripts allow-same-origin"
+      <iframe
+        ref={iframeRef}
+        style={{
+          width: "100%",
+          height: 220,
+          background: "#fff",
+          marginTop: 12,
+          borderRadius: 8,
+        }}
+        title="code-output"
+        sandbox="allow-scripts allow-same-origin"
       />
 
       {status && <p style={{ marginTop: 8, opacity: 0.95 }}>{status}</p>}
