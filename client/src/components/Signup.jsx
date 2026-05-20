@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../AuthProvider.jsx';
 import API_BASE_URL from "../config/api";
 import registerImage from "../assets/registerImage.png";
@@ -15,7 +15,9 @@ const SignUp = () => {
   const [responseMsg, setResponseMsg] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
   const { login } = useAuth();
+  const from = location.state?.from?.pathname || "/lessons";
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -36,6 +38,7 @@ const SignUp = () => {
       if (response.data.success) {
         // Optional auto login
         login(response.data.user, response.data.token);
+<<<<<<< Updated upstream
 
         // Redirect after success
         setTimeout(() => {
@@ -46,6 +49,15 @@ const SignUp = () => {
       console.error("Signup Error:", error);
 
       setResponseMsg(error.response?.data?.message || "Something went wrong");
+=======
+        navigate(from, { replace: true });
+      }
+    } catch (error) {
+      console.error("❌ Signup error", error.response?.data || error.message, error);
+      setResponseMsg(
+        error.response?.data?.message || error.message || "Something went wrong"
+      );
+>>>>>>> Stashed changes
     } finally {
       setLoading(false);
     }

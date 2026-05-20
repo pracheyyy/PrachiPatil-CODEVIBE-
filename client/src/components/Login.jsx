@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import axios from "axios";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../AuthProvider.jsx";
 import API_BASE_URL from "../config/api";
 import loginImage from "../assets/loginImage.png";
@@ -13,7 +13,9 @@ const Login = () => {
   const [responseMsg, setResponseMsg] = useState("");
   const [loading, setLoading] = useState(false); // State to manage loading spinner and button disabled state
   const navigate = useNavigate();
+  const location = useLocation();
   const { login } = useAuth();
+  const from = location.state?.from?.pathname || "/lessons";
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -29,7 +31,7 @@ const Login = () => {
 
       if (response.data.success) {
         login(response.data.user, response.data.token);
-        navigate("/Dashboard");
+        navigate(from, { replace: true });
       }
     } catch (error) {
       console.error("❌ Login error", error.response?.data || error.message);
@@ -71,7 +73,7 @@ const Login = () => {
             {responseMsg && <p style={{ color: "white" }}>{responseMsg}</p>}
 
             <p>
-              Don't have an account? <Link to="/Signup">Signup</Link>
+              Don't have an account? <Link to="/signup">Signup</Link>
             </p>
             <p>
               Forgot Password? <Link to="/ForgetPassword">Click Here</Link>

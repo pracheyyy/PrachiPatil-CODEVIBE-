@@ -17,7 +17,7 @@ const getBackendURL = () => {
     hostname === "::1" ||
     hostname.startsWith("192.168.")
   ) {
-    return "http://localhost:5002";
+    return "http://localhost:5000";
   }
 
   // Production backend deployed on Render
