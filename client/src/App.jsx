@@ -4,6 +4,8 @@ import API_BASE_URL from "./config/api";
 
 const App = () => {
   const [data, setData] = useState("");
+  const [signupLoading, setSignupLoading] = useState(false);
+  const [loginLoading, setLoginLoading] = useState(false);
 
   const [formData, setFormData] = useState({
     username: "",
@@ -22,6 +24,8 @@ const App = () => {
   // SIGNUP
   const handleSignup = async () => {
     try {
+      setSignupLoading(true);
+      
       const response = await axios.post(
         `${API_BASE_URL}/api/auth/register`,
         {
@@ -38,12 +42,16 @@ const App = () => {
     } catch (error) {
       setData(error?.response?.data?.message || "Signup failed");
       console.log("❌ Signup Error:", error?.response?.data);
+    } finally {
+      setSignupLoading(false);
     }
   };
 
   // LOGIN
   const handleLogin = async () => {
     try {
+      setLoginLoading(true);
+      
       const response = await axios.post(
         `${API_BASE_URL}/api/auth/login`,
         {
@@ -57,6 +65,8 @@ const App = () => {
     } catch (error) {
       setData(error?.response?.data?.message || "Login failed");
       console.log("❌ Login Error:", error?.response?.data);
+    } finally {
+      setLoginLoading(false);
     }
   };
 
@@ -113,9 +123,16 @@ const App = () => {
       />
     </div>
 
-      <button onClick={handleSignup}>Signup</button>
-      <button onClick={handleLogin} style={{ marginLeft: "10px" }}>
-        Login
+      <button onClick={handleSignup} disabled={signupLoading}>
+        {signupLoading ? "Signing up..." : "Signup"}
+      </button>
+
+      <button
+       onClick={handleLogin}
+       disabled={loginLoading}
+       style={{ marginLeft: "10px" }}
+      >
+       {loginLoading ? "Logging in..." : "Login"}
       </button>
 
       <p>Response: {data}</p>
