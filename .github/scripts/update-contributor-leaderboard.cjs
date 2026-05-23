@@ -129,7 +129,8 @@ async function syncLeaderboardWithBackend({ contributors, core }) {
 
   if (!response.ok) {
     const body = await response.text();
-    throw new Error(`Backend leaderboard sync failed: ${response.status} ${body}`);
+    core.warning(`Backend leaderboard sync failed: ${response.status} ${body}`);
+    return;
   }
 
   core.info(`Synced ${contributors.length} contributors with backend.`);
