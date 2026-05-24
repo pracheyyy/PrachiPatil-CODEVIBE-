@@ -2786,3 +2786,59 @@ select:focus {
     font-size: 1.5rem;
   }
 }
+
+
+
+/* Testimonials Section */
+
+/* Testimonials Section */
+
+.testimonials {
+  padding: 60px 20px;
+  text-align: center;
+  background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 50%, #0a0e27 100%);
+}
+.testimonials h2 {
+  font-size: 2rem;
+  margin-bottom: 10px;
+  color: #ff4d6d;
+  text-shadow: 0 0 12px rgba(255, 77, 109, 0.8);
+}
+
+
+
+.testimonial-container {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+}
+
+.testimonial-card {
+  background: rgba(26, 31, 58, 0.95);
+  padding: 20px;
+  width: 280px;
+  border-radius: 12px;
+  border: 2px solid rgba(255, 77, 109, 0.5);
+  box-shadow: 0 0 20px rgba(255, 77, 109, 0.25);
+  transition: all 0.3s ease;
+}
+
+.testimonial-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 0 25px rgba(255, 77, 109, 0.6);
+  border-color: #ff4d6d;
+}
+
+.testimonial-card p {
+  font-size: 1rem;
+  color: #b0b8d4;
+  margin-bottom: 15px;
+}
+
+.testimonial-card h4 {
+  color: #ff85a1;
+  font-weight: 600;
+  
+}
