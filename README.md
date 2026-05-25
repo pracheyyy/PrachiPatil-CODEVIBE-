@@ -181,24 +181,6 @@ CodeVibe removes friction from the learning journey. Whether you're a complete b
 
 ---
 
-## Environment Setup
-
-The server requires a few environment variables to run. Copy the template and configure them:
-
-```bash
-cp server/.env.example server/.env
-```
-
-| Variable | Description |
-|----------|-------------|
-| `PORT` | Port the Express server listens on (default: `5002`) |
-| `DB_URL` / `MONGODB_URI` | MongoDB connection string. `DB_URL` takes precedence if both are set. |
-| `ALLOWED_ORIGINS` | Comma-separated list of origins allowed by CORS (e.g. frontend URLs) |
-| `LEADERBOARD_API_URL` | Endpoint for the contributor leaderboard sync (used in GitHub Actions) |
-| `LEADERBOARD_API_TOKEN` | Secret token to authenticate leaderboard API requests |
-
----
-
 ## Project Structure
 
 ```
